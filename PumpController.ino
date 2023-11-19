@@ -1,16 +1,16 @@
 #include "avr/sleep.h"
-#include "avr/wdt.h"
 
-// Time definitions for Watch-dog-timer
-#define WDT_1S B00000110  // 1s
-#define WDT_2S B00000111  // 2s
-#define WDT_4S B00100000  // 4s
-#define WDT_8S B00100001  // 8s
+// Time definitions for Watch-dog-timer.
+// 1sec at 128kHz clock corresponds to 1.125sec in actual mesured time.
+#define WDT_1S B00000110  // 1sec (= 1.125sec)
+#define WDT_2S B00000111  // 2sec (= 2.25sec)
+#define WDT_4S B00100000  // 4sec (= 4.5sec)
+#define WDT_8S B00100001  // 8sec (= 9sec)
 
 const uint8_t pinPump = 0;
-const uint32_t pumpDuration = 4000; // Run pump 4sec.
-const uint32_t sleepDuration = 9; // The actual value of sleep duration was 9sec (under 128KHz clock).
-const uint32_t interval = (24 * 60 * 60) / sleepDuration; // = 9600
+const uint16_t pumpDuration = 4000; // Run pump 4sec (4.5sec at 128kHz clock).
+const byte sleepDuration = WDT_8S; // Sleep 8sec but the actual duration of sleep is 9sec at 128KHz clock.
+const uint16_t interval = 9600; // = ((24 * 60 * 60) / 1) / 9; Run pump once a day.
 
 // Intrpt svc rtn for WDT ISR (vect)
 ISR(WDT_vect) {}
@@ -23,11 +23,11 @@ void setupWDT(byte sleepT) {
   WDTCR |= B01000000;  // Finally, enable WDT-interrrupt
 }
 
-uint32_t counter;
+uint16_t counter;
 
 void setup() {
   set_sleep_mode(SLEEP_MODE_PWR_DOWN);
-  setupWDT(WDT_8S);
+  setupWDT(sleepDuration);
 
   pinMode(pinPump, OUTPUT);
   digitalWrite(pinPump, LOW);
@@ -50,7 +50,10 @@ void loop() {
   }
   digitalWrite(pinPump, LOW);
 
-  counter = (counter + 1) % interval;
+  counter++;
+  if (counter >= interval) {
+    counter = 0;
+  }
 
   deepSleep();
 }
